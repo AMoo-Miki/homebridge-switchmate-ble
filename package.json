@@ -1,0 +1,32 @@
+{
+  "name": "homebridge-switchmate-ble",
+  "version": "1.0.0",
+  "description": "Homebridge plugin for Switchmate light switches and power outlets",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AMoo-Miki/homebridge-switchmate-ble.git"
+  },
+  "author": "AMoo-Miki",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/AMoo-Miki/homebridge-switchmate-ble/issues"
+  },
+  "homepage": "https://github.com/AMoo-Miki/homebridge-switchmate-ble#readme",
+  "dependencies": {
+    "async": "^2.6.1",
+    "noble-device": "^1.4.1"
+  },
+  "keywords": [
+    "homebridge-plugin",
+    "homebridge",
+    "switchmate"
+  ],
+  "engines": {
+    "homebridge": ">=0.4.0",
+    "node": ">=8.6.0"
+  }
+}
