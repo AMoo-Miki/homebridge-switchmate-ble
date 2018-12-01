@@ -1,11 +1,16 @@
-const SwitchmateAccessory = require('./lib/SwitchmateAccessory');
+const SwitchAccessory = require('./lib/SwitchAccessory');
+const OutletAccessory = require('./lib/OutletAccessory');
+
+const scanner = require('./lib/scanner');
 
 const PLUGIN_NAME = 'homebridge-switchmate-ble';
 const PLATFORM_NAME = 'SwitchmateBLE';
+const SWITCH_TYPE = scanner.SWITCH;
+const OUTLET_TYPE = scanner.OUTLET;
+
+const CLASS_DEF = {[OUTLET_TYPE]: OutletAccessory, [SWITCH_TYPE]: SwitchAccessory};
 
 let Characteristic, PlatformAccessory, Service, Categories, UUID;
-
-UUID = { generate: () => {}};
 
 module.exports = function(homebridge) {
     ({
@@ -22,12 +27,17 @@ class SwitchmateBLE {
 
         this.cachedAccessories = new Map();
 
+        if (this.config.timeout) scanner.timeout = this.config.timeout;
+        if (this.config.gap) scanner.gap = this.config.gap;
+
         this.groups = [];
         this.devices = {};
+
         this.config.devices.forEach(config => {
-            const devices = (Array.isArray(config.group) ? config.group : [config]).filter(device => {
+            const {group, id, authCode, ...context} = config;
+            const devices = (Array.isArray(group) ? group : [{id: id, authCode: authCode}]).filter(device => {
                 if (/^[0-9a-f]{12}$/i.test(device.id)) return true;
-                this.log.error('Invalid device id: %s', device.id);
+                this.log.error('Invalid device id: %s in %s', device.id, JSON.stringify(config));
             });
 
             if (devices.length > 0) {
@@ -38,10 +48,14 @@ class SwitchmateBLE {
                     ids.push(device.id);
                 });
                 ids.sort();
+                const shortIds = ids.map(id => id.slice(8)).join('.');
                 this.groups.push({
+                    model: shortIds,
+                    hwid: ids.join('.'),
+                    ...context,
                     devices: devices,
                     UUID: UUID.generate(PLUGIN_NAME + ':' + ids.join('-')),
-                    name: config.name || ids.map(id => id.slice(8)).join('-')
+                    name: config.name || shortIds
                 });
             }
         });
@@ -56,34 +70,32 @@ class SwitchmateBLE {
         const deviceIds = Object.keys(this.devices);
         if (deviceIds.length === 0) return this.log.error('No valid configured devices found.');
 
-        this.log.debug('Starting discovery...');
+        scanner.on('discover', device => {
+            if (connectedDevices.includes(device.id)) return;
+            connectedDevices.push(device.id);
 
-        SwitchmateAccessory.discover({ids: deviceIds})
-            .on('discover', config => {
-                connectedDevices.push(config.id);
+            const group = this.groups[this.devices[device.id]._group];
 
-                let locatedCount = 0;
-                const group = this.groups[this.devices[config.id]._group];
-                group.devices.forEach((device, idx) => {
-                    if (device.id === config.id) {
-                        group.devices[idx]._located = new SwitchmateAccessory({...this.devices[config.id], ...config});
-                        locatedCount++;
-                    } else if (device._located) locatedCount++;
+            let locatedCount = 0;
+            group.devices.forEach((config, idx) => {
+                if (device.id === config.id) {
+                    device._config = config;
+                    group.devices[idx]._located = device;
+                    locatedCount++;
+                } else if (config._located) locatedCount++;
+            });
+
+            this.log.info('Discovered %s:%s (%d of %d)', group.name, device.id, locatedCount, group.devices.length);
+
+            if (group.devices.length === locatedCount && locatedCount > 0) {
+                const {devices, ...context} = group;
+                this.addAccessory({
+                    ...context,
+                    devices: devices.map(device => device._located)
                 });
-
-                this.log.debug('Discovered %s:%s (%d of %d)', this.devices[config.id].name, config.id, locatedCount, group.devices.length);
-
-                if (group.devices.length === locatedCount && locatedCount > 0)
-                    this.addAccessory({name: group.name, UUID: group.UUID, devices: group.devices.map(device => device._located)});
-            });
-
-        setTimeout(() => {
-            deviceIds.forEach(deviceId => {
-                if (connectedDevices.includes(deviceId)) return;
-
-                this.log.debug('Failed to discover %s in time but will keep looking:', deviceId);
-            });
-        }, 60000);
+            }
+        });
+        scanner.start(null, Object.keys(this.devices));
     }
 
     registerPlatformAccessories(platformAccessories) {
@@ -115,33 +127,29 @@ class SwitchmateBLE {
     }
 
     addAccessory(group) {
-        console.log(group.map(d => { return {id: d.context.id, v: d.context.version, t: d.context.type}; }));
-        if (group.devices.length > 1 && group.devices.some(device => device.context.type === SwitchmateAccessory.OUTLET)) {
+        if (group.devices.length > 1 && group.devices.some(device => device.type === scanner.OUTLET)) {
             this.log.debug('Outlets cannot participate in groups (%s)', group.name);
             return;
         } else {
-            group.type = group.devices[0].context.type;
+            group.type = group.devices[0].type;
         }
 
-        const deviceConfig = group.context;
-        const type = (deviceConfig.type || '').toLowerCase();
+        const Accessory = CLASS_DEF[group.type];
 
-        const Accessory = CLASS_DEF[type];
-
-        let accessory = this.cachedAccessories.get(deviceConfig.UUID),
+        let accessory = this.cachedAccessories.get(group.UUID),
             isCached = true;
 
         if (!accessory) {
-            accessory = new PlatformAccessory(deviceConfig.name, deviceConfig.UUID, Accessory.getCategory(Categories));
+            accessory = new PlatformAccessory(group.name, group.UUID, Accessory.getCategory(Categories));
             accessory.getService(Service.AccessoryInformation)
-                .setCharacteristic(Characteristic.Manufacturer, (PLATFORM_NAME + ' ' + deviceConfig.manufacturer).trim())
-                .setCharacteristic(Characteristic.Model, deviceConfig.model || "Unknown")
-                .setCharacteristic(Characteristic.SerialNumber, deviceConfig.id.slice(8));
+                .setCharacteristic(Characteristic.Manufacturer, 'Switchmate')
+                .setCharacteristic(Characteristic.Model, group.model)
+                .setCharacteristic(Characteristic.SerialNumber, '1.0');
 
             isCached = false;
         }
 
-        this.cachedAccessories.set(deviceConfig.UUID, new Accessory(this, accessory, group, !isCached));
+        this.cachedAccessories.set(group.UUID, new Accessory(this, accessory, group, !isCached));
     }
 
     removeAccessory(homebridgeAccessory) {
