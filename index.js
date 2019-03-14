@@ -29,6 +29,8 @@ class SwitchmateBLE {
 
         if (this.config.timeout) scanner.timeout = this.config.timeout;
         if (this.config.gap) scanner.gap = this.config.gap;
+        if (!isFinite(this.config.http) || this.config.http < 80) this.config.http = false;
+        if (this.config.http) require('./lib/WebControl').start(this);
 
         this.groups = [];
         this.devices = {};
@@ -71,7 +73,11 @@ class SwitchmateBLE {
         if (deviceIds.length === 0) return this.log.error('No valid configured devices found.');
 
         scanner.on('discover', device => {
+            if (!device || !device.id) return;
             if (connectedDevices.includes(device.id)) return;
+
+            if (!this.devices[device.id]) return this.log.warn('Discovered a device that has not been configured yet (%s).', device.id);
+
             connectedDevices.push(device.id);
 
             const group = this.groups[this.devices[device.id]._group];
