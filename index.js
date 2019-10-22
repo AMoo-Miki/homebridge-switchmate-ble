@@ -153,6 +153,9 @@ class SwitchmateBLE {
                 .setCharacteristic(Characteristic.SerialNumber, '1.0');
 
             isCached = false;
+        } else {
+            // Destroy the old one
+            accessory.destroy && accessory.destroy();
         }
 
         this.cachedAccessories.set(group.UUID, new Accessory(this, accessory, group, !isCached));
