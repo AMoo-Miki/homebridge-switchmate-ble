@@ -2,3 +2,4 @@
 /*.ipr
 /*.iws
 /node_modules
+/package-lock.json
