@@ -2,6 +2,8 @@
 
 Homebridge plugin for Switchmate light switches and power outlets, allowing them to be exposed to Apple's HomeKit and HTTP.
 
+**Note:** v1.3.0 adds the new v3 signature and depends on NodeJS v14. I like to test the plugin for a few weeks but I have rushed it out to allow you to use it. I will be testing and improving the plugin for a few weeks. My setup uses BlueZ v5.55 on an RPi 3 but if you face a problem, don't hesitate to raise an issue; bare in mind that I might not be able to address it for weeks due to... hmm... you know... life!
+
 ## Installation
 After fulfilling the prerequisites, install this plugin using `npm i -g homebridge-switchmate-ble`.
 
@@ -88,4 +90,6 @@ The plugin periodically checks on `v1` switches as often as 6 times a minute. Fo
 
 If you use the Switchmate app on your phone or tablet to control a switch or plug, the `authCode` for `v1` switches might change and `v3` devices might stop responding to this plugin. If this happens to a device, re-pair to get a new `authCode` in case of `v1` switches, unplug and re-plug in the case of plugs, and remove and re-insert batteries for a `v3` switch.
 
-I recommend you not add the plugs and switches to the Switchmate app to prevent them from updating and instead use the HTTP server to integrate with Alexa and others.   
+I recommend you not add the plugs and switches to the Switchmate app to prevent them from updating and instead use the HTTP server to integrate with Alexa and others.
+
+Also, some Switchmates are simply unreliable. I have a bunch that work for a day and then just stop working. There is nothing the plugin can do to wake them up or prevent them from going bad.   
