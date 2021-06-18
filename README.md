@@ -41,14 +41,14 @@ The configuration parameters to enable your devices would need to be added to `p
         {
             "platform": "SwitchmateBLE",
 
-            /* To enable HTTP control, set the port number you want
-             * it to listen on.
-             * Omitting this field or setting it to false will
-             * disable the HTTP server.
+            /* To enable HTTP control, set the port number you want it to listen on.
+             * Omitting this field or setting it to false will disable the HTTP server
+             * and setting it to anything other than a finite number will turn on the
+             * server on port 8282. 
              */
             "http": 50505,
 
-            /* To enable authentication, set both the fields below */
+            /* To enable authentication, set both the fields below; omit to ignore. */
             "httpUser": "unique-user",
             "httpPass": "Un!9u3p4$5W0rD",
 
@@ -84,6 +84,70 @@ The configuration parameters to enable your devices would need to be added to `p
     ...
 }
 ```
+
+## HTTP control
+#### List
+To get a list of the controllable devices and their IDs:
+```shell
+curl -X GET http://0.0.0.0:50505
+```
+The output would be a JSON object of key-values: keys are IDs and values are names.
+```json5
+{"e9181f6b-40f7-4cd4-aa4b-a1caf038305e": "Garage Light", ...}
+```
+
+#### Get state
+Appending the device ID to the base URL, you can get the state of a light switch. Power plugs have 3 devices; adding ":" followed by a number indicates which device you are querying.
+```shell
+#Light switch
+curl -X GET http://0.0.0.0:50505/e9181f6b-40f7-4cd4-aa4b-a1caf038305e
+
+# Power plug night light uses ":0"
+curl -X GET http://0.0.0.0:50505/e9181f6b-40f7-4cd4-aa4b-a1caf038305e:0
+# Top plug uses ":1"
+curl -X GET http://0.0.0.0:50505/e9181f6b-40f7-4cd4-aa4b-a1caf038305e:1
+# Bottom plug uses ":2"
+curl -X GET http://0.0.0.0:50505/e9181f6b-40f7-4cd4-aa4b-a1caf038305e:2
+```
+
+The output would be a JSON object with the state indicating if the device is on (`true`) or off (`false`).
+```json5
+{"device": "e9181f6b-40f7-4cd4-aa4b-a1caf038305e", "state": true}
+```
+
+#### Set state
+Controlling a device is done using the `PUT` verb. There are two ways of doing this and if you ever need something different, you can raise a PR or an issue.
+
+##### Method 1: Putting JSON
+The state is fed into `PUT` as a JSON object. `{"state": true}` turns a device on and `{"state": off}` turns it off.
+
+```shell
+#Light switch
+curl -X PUT -d "{\"state\":true}" http://0.0.0.0:50505/e9181f6b-40f7-4cd4-aa4b-a1caf038305e
+
+# Power plug night light uses ":0"
+curl -X PUT -d "{\"state\":true}" http://0.0.0.0:50505/e9181f6b-40f7-4cd4-aa4b-a1caf038305e:0
+# Top plug uses ":1"
+curl -X PUT -d "{\"state\":true}" http://0.0.0.0:50505/e9181f6b-40f7-4cd4-aa4b-a1caf038305e:1
+# Bottom plug uses ":2"
+curl -X PUT -d "{\"state\":true}" http://0.0.0.0:50505/e9181f6b-40f7-4cd4-aa4b-a1caf038305e:2
+```
+
+##### Method 2: Using a suffix
+This method omits passing any data, in favor of "/on" and "/off" suffices.
+
+```shell
+#Light switch
+curl -X PUT http://0.0.0.0:50505/e9181f6b-40f7-4cd4-aa4b-a1caf038305e/on
+
+# Power plug night light uses ":0"
+curl -X PUT http://0.0.0.0:50505/e9181f6b-40f7-4cd4-aa4b-a1caf038305e:0/on
+# Top plug uses ":1"
+curl -X PUT http://0.0.0.0:50505/e9181f6b-40f7-4cd4-aa4b-a1caf038305e:1/on
+# Bottom plug uses ":2"
+curl -X PUT http://0.0.0.0:50505/e9181f6b-40f7-4cd4-aa4b-a1caf038305e:2/on
+```
+
 
 ## Note
 The plugin periodically checks on `v1` switches as often as 6 times a minute. For `v3` devices, it just connects and holds the connection.

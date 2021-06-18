@@ -14,7 +14,6 @@ program
 
 scanner.on('discover', device => {
     console.log(`Found a ${device.type} (v${device.version}) with id of ${device.id}`);
-    //console.log(`Found a ${device.type} (v${device.version}) with id of ${device.id}, mfg as ${device._peripheral.advertisement.manufacturerData.toString('hex')}, and svc of ${device._peripheral.advertisement.serviceUuids}`);
 });
 scanner.start(null, null);
 
