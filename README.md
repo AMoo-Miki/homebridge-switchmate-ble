@@ -10,7 +10,9 @@ After fulfilling the prerequisites, install this plugin using `npm i -g homebrid
 Update the `config.json` file of your Homebridge setup, by modifying the sample configuration below.
 
 #### Prerequisites
-This plugin depends on [@abandonware/noble](https://www.npmjs.com/package/@abandonware/noble). Refer to [their prerequisites](https://github.com/abandonware/noble#prerequisites) to prepare your system. 
+This plugin depends on [@abandonware/noble](https://www.npmjs.com/package/@abandonware/noble). Refer to [their prerequisites](https://github.com/abandonware/noble#prerequisites) to prepare your system.
+
+The [node-bluetooth-hci-socket](https://github.com/noble/node-bluetooth-hci-socket) package, a nested dependency, is not installable on OSX. Hence, this plugin will not be usable on that platform. 
 
 #### Permissions
 NodeJS needs permission to control the Bluetooth radio on your system. Execute the command below to give NodeJS the capability use raw sockets and manage the interface.
